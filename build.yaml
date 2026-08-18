@@ -1,0 +1,14 @@
+---
+include:
+  - board: nice_nano_v2
+    shield: sofle_left sofle_choc_v35_rgb
+    artifact-name: sofle-left
+
+  - board: nice_nano_v2
+    shield: sofle_right sofle_choc_v35_rgb
+    artifact-name: sofle-right
+
+  # Use this image only when BLE pairings need to be erased.
+  - board: nice_nano_v2
+    shield: settings_reset
+    artifact-name: settings-reset

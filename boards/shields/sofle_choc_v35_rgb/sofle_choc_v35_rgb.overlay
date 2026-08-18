@@ -1,0 +1,8 @@
+/*
+ * Sofle Choc V3.5 per-key RGB add-on.
+ *
+ * The controller-specific pin setup lives in boards/nice_nano_v2.overlay.
+ * This shield intentionally does not define any separate underglow LEDs.
+ *
+ * SPDX-License-Identifier: MIT
+ */

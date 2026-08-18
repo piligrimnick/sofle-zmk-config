@@ -1,0 +1,5 @@
+# Copyright (c) 2026
+# SPDX-License-Identifier: MIT
+
+config SHIELD_SOFLE_CHOC_V35_RGB
+    def_bool $(shields_list_contains,sofle_choc_v35_rgb)

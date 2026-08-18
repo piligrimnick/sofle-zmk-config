@@ -1,0 +1,9 @@
+# Copyright (c) 2026
+# SPDX-License-Identifier: MIT
+
+if SHIELD_SOFLE_CHOC_V35_RGB
+
+config ZMK_RGB_UNDERGLOW
+    default y
+
+endif

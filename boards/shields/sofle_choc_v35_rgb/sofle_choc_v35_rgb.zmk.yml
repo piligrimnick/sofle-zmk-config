@@ -1,0 +1,8 @@
+file_format: "1"
+id: sofle_choc_v35_rgb
+name: Sofle Choc V3.5 per-key RGB
+type: shield
+url: https://42keebs.eu/shop/kits/pro-micro-based/sofle-choc-hotswap-split-ergo-50-kit/
+requires: [pro_micro]
+features:
+  - underglow
