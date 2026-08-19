@@ -1,4 +1,5 @@
 name: zmk-keyboard-sofle-choc-v35
 build:
+  cmake: .
   settings:
     board_root: .
