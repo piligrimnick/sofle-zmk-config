@@ -6,3 +6,15 @@
  *
  * SPDX-License-Identifier: MIT
  */
+
+/ {
+    behaviors {
+        /* Internal global behavior used to tell both halves which of the five
+         * Bluetooth-specific RGB slots is active. The short node name also
+         * fits the ZMK split behavior protocol. */
+        rgb_prof: rgb_prof {
+            compatible = "zmk,behavior-sofle-rgb-profile";
+            #binding-cells = <2>;
+        };
+    };
+};

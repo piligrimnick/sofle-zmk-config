@@ -4,16 +4,24 @@ on:
   push:
     paths:
       - ".github/workflows/build.yml"
+      - "CMakeLists.txt"
       - "build.yaml"
       - "config/**"
       - "boards/**"
+      - "dts/**"
+      - "include/**"
+      - "src/**"
       - "zephyr/**"
   pull_request:
     paths:
       - ".github/workflows/build.yml"
+      - "CMakeLists.txt"
       - "build.yaml"
       - "config/**"
       - "boards/**"
+      - "dts/**"
+      - "include/**"
+      - "src/**"
       - "zephyr/**"
   workflow_dispatch:
 

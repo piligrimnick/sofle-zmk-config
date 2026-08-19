@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+
+description: Synchronize a Sofle RGB settings slot across both halves
+
+compatible: "zmk,behavior-sofle-rgb-profile"
+
+include: two_param.yaml

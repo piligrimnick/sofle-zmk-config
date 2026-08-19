@@ -17,6 +17,7 @@
 #include <drivers/ext_power.h>
 
 #include <zmk/event_manager.h>
+#include <zmk/rgb_underglow.h>
 
 #if IS_ENABLED(CONFIG_ZMK_BLE) &&                                                        \
     (!IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL))
@@ -122,7 +123,18 @@ static void status_keep_power_enabled(void) {
 
 static void status_restore_power(void) {
 #if IS_ENABLED(CONFIG_ZMK_RGB_UNDERGLOW_EXT_POWER)
-    if (restore_power_valid && !restore_power) {
+    bool rgb_on;
+
+    /* A Bluetooth profile can change while its status animation is running.
+     * Restore the newly selected profile's live state, falling back to the
+     * power state captured at animation start only if RGB is unavailable. */
+    if (zmk_rgb_underglow_get_state(&rgb_on) != 0) {
+        rgb_on = restore_power_valid ? restore_power : true;
+    }
+
+    if (rgb_on) {
+        ext_power_enable(status_ext_power);
+    } else {
         status_show(0, 0, 0);
         ext_power_disable(status_ext_power);
     }
