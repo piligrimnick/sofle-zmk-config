@@ -7,3 +7,15 @@ config ZMK_RGB_UNDERGLOW
     default y
 
 endif
+
+if SHIELD_SOFLE_CHOC_V35_RGB && ZMK_SPLIT_ROLE_CENTRAL
+
+# Fetch the right half's battery level and expose it to the host as a second
+# standard BLE Battery Service instance.
+config ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING
+    default y
+
+config ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_PROXY
+    default y
+
+endif
