@@ -25,3 +25,13 @@ if(CONFIG_ZMK_RGB_UNDERGLOW)
     "-Wl,--wrap=zmk_rgb_underglow_change_spd"
   )
 endif()
+
+if(CONFIG_ZMK_BATTERY_REPORTING)
+  target_sources(
+    app PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/src/sofle_battery_filter.c
+  )
+
+  # Smooth the voltage before ZMK converts it to a reported percentage.
+  zephyr_ld_options("-Wl,--wrap=lithium_ion_mv_to_pct")
+endif()
