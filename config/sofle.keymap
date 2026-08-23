@@ -16,7 +16,49 @@
 #define RAISE 2
 #define ADJUST 3
 
+#define LEFT_HAND_KEYS  \
+    0 1 2 3 4 5        \
+    12 13 14 15 16 17 \
+    24 25 26 27 28 29 \
+    36 37 38 39 40 41 42 \
+    50 51 52 53 54
+
+#define RIGHT_HAND_KEYS \
+    6 7 8 9 10 11       \
+    18 19 20 21 22 23   \
+    30 31 32 33 34 35   \
+    43 44 45 46 47 48 49 \
+    55 56 57 58 59
+
 / {
+    behaviors {
+        hml: home_row_mod_left {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            display-name = "Home Row Mod Left";
+            flavor = "balanced";
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <150>;
+            bindings = <&kp>, <&kp>;
+            hold-trigger-key-positions = <RIGHT_HAND_KEYS>;
+            hold-trigger-on-release;
+        };
+
+        hmr: home_row_mod_right {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            display-name = "Home Row Mod Right";
+            flavor = "balanced";
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <150>;
+            bindings = <&kp>, <&kp>;
+            hold-trigger-key-positions = <LEFT_HAND_KEYS>;
+            hold-trigger-on-release;
+        };
+    };
+
     conditional_layers {
         compatible = "zmk,conditional-layers";
 
@@ -34,13 +76,13 @@
 // ------------------------------------------------------------------------------------------------------------
 // |  ESC  |  1  |  2  |  3   |  4   |  5   |                   |  6   |  7    |  8    |  9   |   0   | BKSPC |
 // |   `   |  Q  |  W  |  E   |  R   |  T   |                   |  Y   |  U    |  I    |  O   |   P   |       |
-// |  TAB  |  A  |  S  |  D   |  F   |  G   |                   |  H   |  J    |  K    |  L   |   ;   |   '   |
+// |  TAB  | A/CMD | S/OPT | D/CTRL | F/SHFT | G |              | H | J/SHFT | K/CTRL | L/OPT | ;/CMD |   '   |
 // | SHIFT |  Z  |  X  |  C   |  V   |  B   |  MUTE  |  |       |  N   |  M    |  ,    |  .   |   /   | SHIFT |
 //               | CTRL | ALT | GUI | LOWER | ENTER |  | SPACE | RAISE | CTRL | ALT | GUI |
             bindings = <
 &kp ESC   &kp N1 &kp N2   &kp N3   &kp N4    &kp N5                           &kp N6 &kp N7    &kp N8     &kp N9   &kp N0   &kp BSPC
 &kp GRAVE &kp Q  &kp W    &kp E    &kp R     &kp T                            &kp Y  &kp U     &kp I      &kp O    &kp P    &none
-&kp TAB   &kp A  &kp S    &kp D    &kp F     &kp G                            &kp H  &kp J     &kp K      &kp L    &kp SEMI &kp SQT
+&kp TAB   &hml LGUI A &hml LALT S &hml LCTRL D &hml LSHFT F &kp G              &kp H &hmr RSHFT J &hmr RCTRL K &hmr RALT L &hmr RGUI SEMI &kp SQT
 &kp LSHFT &kp Z  &kp X    &kp C    &kp V     &kp B      &kp C_MUTE &none      &kp N  &kp M     &kp COMMA &kp DOT  &kp FSLH &kp RSHFT
                  &kp LCTRL &kp LALT &kp LGUI &mo LOWER  &kp RET    &kp SPACE  &mo RAISE  &kp RCTRL &kp RALT &kp RGUI
             >;
