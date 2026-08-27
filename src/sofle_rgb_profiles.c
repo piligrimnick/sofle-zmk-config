@@ -28,6 +28,8 @@
 #include <zmk/events/position_state_changed.h>
 #include <zmk/rgb_underglow.h>
 
+#include "sofle_rgb_reactive.h"
+
 #if IS_ENABLED(CONFIG_ZMK_BLE) &&                                                        \
     (!IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL))
 #define SOFLE_RGB_PROFILE_CENTRAL 1
@@ -44,7 +46,6 @@
 #define SOFLE_RGB_PROFILE_COUNT 5
 #define SOFLE_RGB_PROFILE_MAGIC 0x53465247U /* "SFRG" */
 #define SOFLE_RGB_PROFILE_VERSION 1
-#define SOFLE_RGB_EFFECT_COUNT 4
 #define SOFLE_RGB_SPEED_MIN 1
 #define SOFLE_RGB_SPEED_MAX 5
 #define SOFLE_RGB_INIT_DELAY_MS 100
@@ -56,7 +57,7 @@
 #define SOFLE_RGB_PACK_BRT_SHIFT 16
 #define SOFLE_RGB_PACK_SPEED_SHIFT 23
 #define SOFLE_RGB_PACK_EFFECT_SHIFT 26
-#define SOFLE_RGB_PACK_ON_SHIFT 28
+#define SOFLE_RGB_PACK_ON_SHIFT 29
 
 struct sofle_rgb_profile {
     struct zmk_led_hsb color;
@@ -110,7 +111,6 @@ static uint8_t sync_attempts_remaining;
 
 int __real_zmk_rgb_underglow_on(void);
 int __real_zmk_rgb_underglow_off(void);
-int __real_zmk_rgb_underglow_select_effect(int effect);
 int __real_zmk_rgb_underglow_set_hsb(struct zmk_led_hsb color);
 int __real_zmk_rgb_underglow_change_spd(int direction);
 
@@ -140,7 +140,7 @@ static struct sofle_rgb_profile unpack_profile(uint32_t packed) {
             .b = (packed >> SOFLE_RGB_PACK_BRT_SHIFT) & 0x7F,
         },
         .speed = (packed >> SOFLE_RGB_PACK_SPEED_SHIFT) & 0x07,
-        .effect = (packed >> SOFLE_RGB_PACK_EFFECT_SHIFT) & 0x03,
+        .effect = (packed >> SOFLE_RGB_PACK_EFFECT_SHIFT) & 0x07,
         .on = (packed >> SOFLE_RGB_PACK_ON_SHIFT) & 0x01,
     };
 }
@@ -160,6 +160,14 @@ static bool store_is_valid(const struct sofle_rgb_profile_store *store) {
     }
 
     return true;
+}
+
+uint8_t sofle_rgb_profile_brightness(void) {
+    if (!profiles_ready || active_profile >= SOFLE_RGB_PROFILE_COUNT) {
+        return CONFIG_ZMK_RGB_UNDERGLOW_BRT_START;
+    }
+
+    return profile_store.profiles[active_profile].color.b;
 }
 
 #if IS_ENABLED(CONFIG_SETTINGS)
@@ -269,7 +277,7 @@ static int apply_profile(uint8_t index) {
 
     rc = __real_zmk_rgb_underglow_set_hsb(profile->color);
     if (rc == 0) {
-        rc = __real_zmk_rgb_underglow_select_effect(profile->effect);
+        rc = sofle_rgb_reactive_select_effect(profile->effect);
     }
 
     while (rc == 0 && runtime_speed < profile->speed) {
@@ -358,7 +366,7 @@ int __wrap_zmk_rgb_underglow_off(void) {
 }
 
 int __wrap_zmk_rgb_underglow_select_effect(int effect) {
-    int rc = __real_zmk_rgb_underglow_select_effect(effect);
+    int rc = sofle_rgb_reactive_select_effect(effect);
 
     if (rc == 0 && profiles_ready && !applying_profile) {
         profile_store.profiles[active_profile].effect = effect;

@@ -1,9 +1,15 @@
 # Sofle-specific runtime additions for ZMK.
 
 if(CONFIG_ZMK_RGB_UNDERGLOW)
+  target_include_directories(
+    app PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+  )
+
   target_sources(
     app PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src/sofle_rgb_profiles.c
+    ${CMAKE_CURRENT_LIST_DIR}/src/sofle_rgb_reactive.c
     ${CMAKE_CURRENT_LIST_DIR}/src/sofle_rgb_status.c
   )
 
@@ -20,6 +26,7 @@ if(CONFIG_ZMK_RGB_UNDERGLOW)
   zephyr_ld_options(
     "-Wl,--wrap=zmk_rgb_underglow_on"
     "-Wl,--wrap=zmk_rgb_underglow_off"
+    "-Wl,--wrap=zmk_rgb_underglow_calc_effect"
     "-Wl,--wrap=zmk_rgb_underglow_select_effect"
     "-Wl,--wrap=zmk_rgb_underglow_set_hsb"
     "-Wl,--wrap=zmk_rgb_underglow_change_spd"

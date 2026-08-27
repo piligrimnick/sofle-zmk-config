@@ -19,6 +19,8 @@
 #include <zmk/event_manager.h>
 #include <zmk/rgb_underglow.h>
 
+#include "sofle_rgb_reactive.h"
+
 #if IS_ENABLED(CONFIG_ZMK_BLE) &&                                                        \
     (!IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL))
 #define SOFLE_RGB_HAS_HOST_BLE 1
@@ -84,6 +86,8 @@ int sofle_rgb_status_intercept(const struct device *dev, struct led_rgb *pixels,
     if (atomic_get(&status_mode) != SOFLE_RGB_STATUS_NONE) {
         return 0;
     }
+
+    sofle_rgb_reactive_render(pixels, num_pixels);
 
     return status_raw_update(dev, pixels, num_pixels);
 }
