@@ -2,11 +2,15 @@
  * Status animations for the Sofle Choc V3.5 per-key RGB chain.
  *
  * The normal ZMK underglow renderer remains responsible for user-selected
- * effects and persistence. While a status animation is active its writes are
- * suppressed, then allowed through again without modifying the saved state.
+ * effects and persistence. The power-on fade suppresses its writes and then
+ * lets them through again without modifying the saved state. Bluetooth
+ * status only overlays the key of the active profile (1-5) on top of the
+ * normal frame, so the rest of the lighting keeps running unchanged.
  *
  * SPDX-License-Identifier: MIT
  */
+
+#include <string.h>
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/led_strip.h>
@@ -38,14 +42,17 @@
 #define SOFLE_RGB_PIXEL_COUNT DT_PROP(SOFLE_RGB_STRIP, chain_length)
 
 #define STARTUP_DELAY_MS 200
-#define STARTUP_FRAME_MS 100
+#define STARTUP_FRAME_MS 50
 #define STARTUP_FADE_STEPS 30
-#define STARTUP_WHITE_10_PERCENT 26
+#define STARTUP_WHITE_30_PERCENT 77
 
-#define BLE_BLUE_20_PERCENT 51
+#define BLE_BLUE_30_PERCENT 77
 #define BLE_PAIR_FRAME_MS 120
 #define BLE_CONNECTED_ON_MS 4000
-#define BLE_CONNECTED_OFF_MS 80
+
+/* Bluetooth profile N (0-based) is shown on the number key N + 1, the same
+ * key that selects it on the RAISE layer. */
+#define BLE_PROFILE_FIRST_KEY_POSITION 1
 
 enum sofle_rgb_status_mode {
     SOFLE_RGB_STATUS_NONE,
@@ -56,6 +63,14 @@ enum sofle_rgb_status_mode {
 
 static const struct device *const status_strip = DEVICE_DT_GET(SOFLE_RGB_STRIP);
 static struct led_rgb status_pixels[SOFLE_RGB_PIXEL_COUNT];
+/* Last frame produced by the normal renderer, kept so the status overlay can
+ * be redrawn on top of it between the renderer's own ticks. */
+static struct led_rgb base_pixels[SOFLE_RGB_PIXEL_COUNT];
+static int overlay_led = -1;
+static struct led_rgb overlay_color;
+/* ZMK renders on its low-priority work queue, the status work runs on the
+ * system one: serialise every strip write and the buffers behind it. */
+static K_MUTEX_DEFINE(status_strip_lock);
 static atomic_t status_mode = ATOMIC_INIT(SOFLE_RGB_STATUS_STARTUP);
 static uint8_t status_frame;
 static bool restore_power;
@@ -81,26 +96,60 @@ static int status_raw_update(const struct device *dev, struct led_rgb *pixels,
     return api->update_rgb(dev, pixels, num_pixels);
 }
 
+/* Caller holds status_strip_lock. */
+static int status_push_locked(const struct device *dev) {
+    memcpy(status_pixels, base_pixels, sizeof(status_pixels));
+    if (overlay_led >= 0 && overlay_led < SOFLE_RGB_PIXEL_COUNT) {
+        status_pixels[overlay_led] = overlay_color;
+    }
+
+    return status_raw_update(dev, status_pixels, SOFLE_RGB_PIXEL_COUNT);
+}
+
 int sofle_rgb_status_intercept(const struct device *dev, struct led_rgb *pixels,
                                size_t num_pixels) {
-    if (atomic_get(&status_mode) != SOFLE_RGB_STATUS_NONE) {
-        return 0;
-    }
+    int ret = 0;
 
     sofle_rgb_reactive_render(pixels, num_pixels);
 
-    return status_raw_update(dev, pixels, num_pixels);
-}
-
-static void status_fill(uint8_t red, uint8_t green, uint8_t blue) {
-    for (int i = 0; i < SOFLE_RGB_PIXEL_COUNT; i++) {
-        status_pixels[i] = (struct led_rgb){.r = red, .g = green, .b = blue};
+    k_mutex_lock(&status_strip_lock, K_FOREVER);
+    memcpy(base_pixels, pixels,
+           MIN(num_pixels, (size_t)SOFLE_RGB_PIXEL_COUNT) * sizeof(struct led_rgb));
+    if (atomic_get(&status_mode) != SOFLE_RGB_STATUS_STARTUP) {
+        ret = status_push_locked(dev);
     }
+    k_mutex_unlock(&status_strip_lock);
+
+    return ret;
 }
 
 static void status_show(uint8_t red, uint8_t green, uint8_t blue) {
-    status_fill(red, green, blue);
+    k_mutex_lock(&status_strip_lock, K_FOREVER);
+    for (int i = 0; i < SOFLE_RGB_PIXEL_COUNT; i++) {
+        status_pixels[i] = (struct led_rgb){.r = red, .g = green, .b = blue};
+    }
     status_raw_update(status_strip, status_pixels, SOFLE_RGB_PIXEL_COUNT);
+    k_mutex_unlock(&status_strip_lock);
+}
+
+/* Draws the normal frame with one key replaced; led < 0 shows it unchanged. */
+static void status_overlay(int led, uint8_t red, uint8_t green, uint8_t blue) {
+    k_mutex_lock(&status_strip_lock, K_FOREVER);
+    overlay_led = led;
+    overlay_color = (struct led_rgb){.r = red, .g = green, .b = blue};
+    status_push_locked(status_strip);
+    k_mutex_unlock(&status_strip_lock);
+}
+
+static int status_profile_led(void) {
+#if SOFLE_RGB_HAS_HOST_BLE
+    int index = zmk_ble_active_profile_index();
+
+    if (index >= 0) {
+        return sofle_rgb_position_to_led(BLE_PROFILE_FIRST_KEY_POSITION + index);
+    }
+#endif
+    return -1;
 }
 
 static void status_capture_and_enable_power(void) {
@@ -147,6 +196,9 @@ static void status_restore_power(void) {
 
 static void status_finish(void) {
     atomic_set(&status_mode, SOFLE_RGB_STATUS_NONE);
+    /* Put the normal frame back at once instead of waiting for the next
+     * renderer tick, which never comes while RGB is off. */
+    status_overlay(-1, 0, 0, 0);
     status_restore_power();
 }
 
@@ -214,9 +266,9 @@ static void status_work_handler(struct k_work *work) {
         }
 
         if (status_frame <= STARTUP_FADE_STEPS) {
-            level = STARTUP_WHITE_10_PERCENT * status_frame / STARTUP_FADE_STEPS;
+            level = STARTUP_WHITE_30_PERCENT * status_frame / STARTUP_FADE_STEPS;
         } else {
-            level = STARTUP_WHITE_10_PERCENT *
+            level = STARTUP_WHITE_30_PERCENT *
                     (STARTUP_FADE_STEPS * 2 - status_frame) / STARTUP_FADE_STEPS;
         }
 
@@ -248,22 +300,18 @@ static void status_work_handler(struct k_work *work) {
 
         status_keep_power_enabled();
         if ((status_frame++ & 1U) == 0U) {
-            status_show(0, 0, BLE_BLUE_20_PERCENT);
+            status_overlay(status_profile_led(), 0, 0, BLE_BLUE_30_PERCENT);
         } else {
-            status_show(0, 0, 0);
+            status_overlay(status_profile_led(), 0, 0, 0);
         }
         k_work_reschedule(&status_work, K_MSEC(BLE_PAIR_FRAME_MS));
         break;
 
     case SOFLE_RGB_STATUS_CONNECTED:
         if (status_frame == 0) {
-            status_show(0, 0, BLE_BLUE_20_PERCENT);
+            status_overlay(status_profile_led(), 0, 0, BLE_BLUE_30_PERCENT);
             status_frame++;
             k_work_reschedule(&status_work, K_MSEC(BLE_CONNECTED_ON_MS));
-        } else if (status_frame == 1) {
-            status_show(0, 0, 0);
-            status_frame++;
-            k_work_reschedule(&status_work, K_MSEC(BLE_CONNECTED_OFF_MS));
         } else {
             status_finish();
         }

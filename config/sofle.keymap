@@ -16,11 +16,13 @@
 #define RAISE 2
 #define ADJUST 3
 
-/* The two macOS input-source shortcuts, "Select next source in Input menu"
- * and "Select the previous input source".  With exactly two sources installed
- * both simply swap the layout; macOS handles them itself. */
-#define LANG_EN LG(SPACE)
-#define LANG_RU LG(LS(SPACE))
+/* Language selection.  Karabiner (karabiner/sofle.json) maps these keys from
+ * this keyboard to its select_input_source, which picks Latin or Cyrillic
+ * outright, so asking for the language already in use changes nothing.
+ * F19 and F20 have no default meaning on macOS, so without Karabiner they
+ * do nothing at all. */
+#define LANG_EN F19
+#define LANG_RU F20
 
 /* Held for as long as the symbol layer is.  While it is down and the Russian
  * layout is active, Karabiner rewrites each of the layer's keys into the
@@ -101,15 +103,14 @@
         };
 
         /* Hold for the layer as before; tap twice to pick a language: lower
-         * means Latin, raise means Cyrillic.  Both are the plain macOS
-         * shortcuts, so with two sources each one just swaps the layout.  A
-         * tap-dance also fires the moment another key goes down, so holding
+         * means Latin, raise means Cyrillic, selected outright by Karabiner.
+         * A tap-dance also fires the moment another key goes down, so holding
          * the layer and typing stays instant. */
         td_lower: tap_dance_lower {
             compatible = "zmk,behavior-tap-dance";
             #binding-cells = <0>;
             display-name = "Lower / Latin";
-            tapping-term-ms = <170>;
+            tapping-term-ms = <190>;
             bindings = <&lower_sym>, <&kp LANG_EN>;
         };
 
@@ -117,7 +118,7 @@
             compatible = "zmk,behavior-tap-dance";
             #binding-cells = <0>;
             display-name = "Raise / Cyrillic";
-            tapping-term-ms = <170>;
+            tapping-term-ms = <190>;
             bindings = <&mo RAISE>, <&kp LANG_RU>;
         };
     };

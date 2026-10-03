@@ -64,7 +64,7 @@ static atomic_t reactive_active = ATOMIC_INIT(false);
 int __real_zmk_rgb_underglow_calc_effect(int direction);
 int __real_zmk_rgb_underglow_select_effect(int effect);
 
-static int position_to_led(uint32_t position) {
+int sofle_rgb_position_to_led(uint32_t position) {
     for (int i = 0; i < ARRAY_SIZE(local_key_positions); i++) {
         if (local_key_positions[i] == position) {
             return i;
@@ -179,7 +179,7 @@ static int reactive_position_listener(const zmk_event_t *event) {
         return ZMK_EV_EVENT_BUBBLE;
     }
 
-    led = position_to_led(changed->position);
+    led = sofle_rgb_position_to_led(changed->position);
     if (led >= 0) {
         uint16_t hue = sys_rand32_get() % 360U;
         k_spinlock_key_t key = k_spin_lock(&reactive_lock);
