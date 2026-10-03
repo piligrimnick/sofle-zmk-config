@@ -7,6 +7,16 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/* The replacement EC11 on the left half turns the other way. Swap its A/B
+ * pins relative to the upstream sofle.dtsi so the keymap keeps meaning
+ * "first binding = clockwise" on both halves. */
+&left_encoder {
+    a-gpios = <&pro_micro 20 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+    b-gpios = <&pro_micro 21 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+};
+
 / {
     behaviors {
         /* Internal global behavior used to tell both halves which of the five
